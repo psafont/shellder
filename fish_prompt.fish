@@ -237,6 +237,12 @@ function prompt_status -d "the symbols for a non zero exit status, root and back
     end
 end
 
+function prompt_opam_switch -d "Display active opam's installation"
+  if test "$OPAM_SWITCH_PREFIX"
+    prompt_segment white black (basename $OPAM_SWITCH_PREFIX)
+  end
+end
+
 if printf '%s\n' '2.2.0' $FISH_VERSION | sort --check=silent --version-sort
   # Current version ≥ 2.2.0
   function __exists -a name -d "Check if a function or program does exist."
@@ -256,6 +262,7 @@ end
 function fish_prompt
   set -g RETVAL $status
   prompt_status
+  prompt_opam_switch
   prompt_virtual_env
   prompt_user
   prompt_dir
