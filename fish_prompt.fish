@@ -76,7 +76,8 @@ end
 #
 function prompt_virtual_env -d "Display Python virtual environment"
   if test "$VIRTUAL_ENV"
-    prompt_segment white black (basename $VIRTUAL_ENV)
+    set env (basename $VIRTUAL_ENV)
+    prompt_segment white black "🐍 $env"
   end
 end
 
@@ -239,7 +240,8 @@ end
 
 function prompt_opam_switch -d "Display active opam's installation"
   if test "$OPAM_SWITCH_PREFIX"
-    prompt_segment white black (basename $OPAM_SWITCH_PREFIX)
+    set env (basename $OPAM_SWITCH_PREFIX)
+    prompt_segment white black "🐫 $env"
   end
 end
 
