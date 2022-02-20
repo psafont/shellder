@@ -245,19 +245,6 @@ function prompt_opam_switch -d "Display active opam's installation"
   end
 end
 
-if printf '%s\n' '2.2.0' $FISH_VERSION | sort --check=silent --version-sort
-  # Current version ≥ 2.2.0
-  function __exists -a name -d "Check if a function or program does exist."
-    command -v "$name" ^/dev/null >&2
-  end
-else
-  # Current version < 2.2.0
-  function __exists -a name -d "Check if a function or program does exist."
-    type "$name" ^/dev/null >&2
-  end
-end
-
-
 #
 # Prompt
 #
@@ -268,8 +255,8 @@ function fish_prompt
   prompt_virtual_env
   prompt_user
   prompt_dir
-  __exists hg;  and prompt_hg
-  __exists git; and prompt_git
-  __exists svn; and prompt_svn
+  type -q hg;  and prompt_hg
+  type -q git; and prompt_git
+  type -q svn; and prompt_svn
   prompt_finish
 end
