@@ -5,25 +5,6 @@
 #     set -g theme_hostname always
 #     set -g default_user your_normal_user
 
-
-
-# Backward compatibility
-#
-# Note: Do not depend on these behavior. These can be removed in anytime by the
-# author in the name of code readability.
-if set -q theme_hide_hostname
-  # Existing $theme_hostname will always override $theme_hide_hostname
-  if not set -q theme_hostname
-    if [ "theme_hide_hostname" = "yes" ]
-      set -g theme_hostname never
-    end
-    if [ "theme_hide_hostname" = "no" ]
-      set -g theme_hostname always
-    end
-  end
-end
-
-
 #
 # Segments functions
 #
@@ -137,37 +118,144 @@ function prompt_hg -d "Display mercurial state"
   end
 end
 
+function prompt_git_operation_branch_detached_bare -d 'prompt_git helper, returns the current Git operation, branchdetached, and bare repo'
+   # This function is passed the full repo_info array
+    set -l git_dir $argv[1]
+    set -l inside_gitdir $argv[2]
+    set -l bare_repo $argv[3]
+    set -q argv[5]
+    and set -l sha $argv[5]
+
+    set -l branch
+    set -l operation
+    set -l detached false
+    set -l bare
+    set -l step
+    set -l total
+
+    if test -d $git_dir/rebase-merge
+        set branch (cat $git_dir/rebase-merge/head-name 2>/dev/null)
+        set step (cat $git_dir/rebase-merge/msgnum 2>/dev/null)
+        set total (cat $git_dir/rebase-merge/end 2>/dev/null)
+        if test -f $git_dir/rebase-merge/interactive
+            set operation "|REBASE-i"
+        else
+            set operation "|REBASE-m"
+        end
+    else
+        if test -d $git_dir/rebase-apply
+            set step (cat $git_dir/rebase-apply/next 2>/dev/null)
+            set total (cat $git_dir/rebase-apply/last 2>/dev/null)
+            if test -f $git_dir/rebase-apply/rebasing
+                set branch (cat $git_dir/rebase-apply/head-name 2>/dev/null)
+                set operation "|REBASE"
+            else if test -f $git_dir/rebase-apply/applying
+                set operation "|AM"
+            else
+                set operation "|AM/REBASE"
+            end
+        else if test -f $git_dir/MERGE_HEAD
+            set operation "|MERGING"
+        else if test -f $git_dir/CHERRY_PICK_HEAD
+            set operation "|CHERRY-PICKING"
+        else if test -f $git_dir/REVERT_HEAD
+            set operation "|REVERTING"
+        else if test -f $git_dir/BISECT_LOG
+            set operation "|BISECTING"
+        end
+    end
+
+    if test -n "$step" -a -n "$total"
+        set operation "$operation $step/$total"
+    end
+
+    if test -z "$branch"
+        if not set branch (command git symbolic-ref HEAD 2>/dev/null)
+            set detached true
+            set branch (switch "$__fish_git_prompt_describe_style"
+                                                case contains
+                                                        command git describe --contains HEAD
+                                                case branch
+                                                        command git describe --contains --all HEAD
+                                                case describe
+                                                        command git describe HEAD
+                                                case default '*'
+                                                        command git describe --tags --exact-match HEAD
+                                                end 2>/dev/null)
+            if test $status -ne 0
+                # Shorten the sha ourselves to 8 characters - this should be good for most repositories,
+                # and even for large ones it should be good for most commits
+                # No need for an ellipsis.
+                if set -q sha
+                    set branch (string shorten -m8 -c "" -- $sha)
+                else
+                    set branch unknown
+                end
+            end
+            set branch "($branch)"
+        end
+    end
+
+    if test true = $inside_gitdir
+        if test true = $bare_repo
+            set bare "BARE:"
+        else
+            # Let user know they're inside the git dir of a non-bare repo
+            set branch "GIT_DIR!"
+        end
+    end
+
+    echo $operation
+    echo $branch
+    echo $detached
+    echo $bare
+end
 
 function prompt_git -d "Display the current git state"
   set -l ref
-  if command git rev-parse --is-inside-work-tree >/dev/null 2>&1
-    set ref (command git symbolic-ref HEAD 2> /dev/null)
-    if [ $status -gt 0 ]
-      set -l branch (command git show-ref --head -s --abbrev |head -n1 2> /dev/null)
-      set ref "➦ $branch "
-    end
-    set branch_symbol \uE0A0
-    set -l branch (echo $ref | sed  "s-refs/heads/-$branch_symbol -")
+  set -l repo_info (command git rev-parse --git-dir --is-inside-git-dir --is-bare-repository --is-inside-work-tree HEAD 2>/dev/null)
+  test -n "$repo_info"
+  or return
 
-    set -l BG PROMPT
+  set -l git_dir $repo_info[1]
+  set -l inside_gitdir $repo_info[2]
+  set -l bare_repo $repo_info[3]
+  set -l inside_worktree $repo_info[4]
+  set -q repo_info[5]
+  and set -l sha $repo_info[5]
+  
+  set -l obdb (prompt_git_operation_branch_detached_bare $repo_info)
+  set -l op $obdb[1] # current operation
+  set -l branch $obdb[2] # current branch
+  set -l detached $obdb[3]
+  set -l bare_repo $obdb[4] # bare repository
+
+  set -l op_in_progress true
+  test -n "$op"; or set op_in_progress false
+
+  if test true = $inside_worktree
+    if test true = $detached
+      set branch_symbol "➦"
+    else
+      set branch_symbol \uE0A0
+      set branch (string replace refs/heads/ '' -- $branch)
+    end
+
+    set -l PROMPT_BRANCH
     set -l dirty (command git status --porcelain --ignore-submodules=dirty 2> /dev/null)
-    if [ "$dirty" = "" ]
+
+    if test -z "$dirty"
       set BG green
-      set PROMPT "$branch"
+      set PROMPT_BRANCH "$branch_symbol $branch"
     else
       set BG yellow
       set dirty ''
 
-      # Check if there's any commit in the repo
-      set -l empty 0
-      git rev-parse --quiet --verify HEAD > /dev/null 2>&1; or set empty 1
-
-      set -l target
-      if [ $empty = 1 ]
+      if test true = $bare_repo
         # The repo is empty
         set target '4b825dc642cb6eb9a060e54bf8d69288fbee4904'
       else
-        # The repo is not emtpy
+        # The repo is not empty
         set target 'HEAD'
 
         # Check for unstaged change only when the repo is not empty
@@ -181,14 +269,18 @@ function prompt_git -d "Display the current git state"
       git diff-index --cached --quiet --exit-code --ignore-submodules=dirty $target; or set staged 1
       if [ $staged = 1 ]; set dirty $dirty'✚'; end
 
-      # Check for dirty
-      if [ "$dirty" = "" ]
-        set PROMPT "$branch"
+      if test false = "$dirty"
+        set PROMPT_BRANCH "$branch_symbol $branch"
       else
-        set PROMPT "$branch $dirty"
+        set PROMPT_BRANCH "$branch_symbol $branch $dirty"
       end
     end
-    prompt_segment $BG black $PROMPT
+
+    prompt_segment $BG black $PROMPT_BRANCH 
+    if test true = "$op_in_progress"
+      set -l PROMPT_OP (string replace '|' "" -- $op)
+      prompt_segment yellow black $PROMPT_OP
+    end
   end
 end
 
@@ -223,13 +315,13 @@ end
 
 function prompt_status -d "the symbols for a non zero exit status, root and background jobs"
     if [ $RETVAL -ne 0 ]
-      prompt_segment black red "✘"
+      prompt_segment black red "$RETVAL"
     end
 
     # if superuser (uid == 0)
     set -l uid (id -u $USER)
     if [ $uid -eq 0 ]
-      prompt_segment black yellow "⚡"
+      prompt_segment black yellow "☣️"
     end
 
     # Jobs display
