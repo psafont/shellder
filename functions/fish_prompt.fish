@@ -11,7 +11,7 @@
 set -g current_bg NONE
 set -g segment_separator \uE0B0
 
-function prompt_segment -d "Function to draw a segment"
+function __prompt_segment -d "Function to draw a segment"
   set -l bg
   set -l fg
   if [ -n "$argv[1]" ]
@@ -41,7 +41,7 @@ function prompt_segment -d "Function to draw a segment"
   end
 end
 
-function prompt_finish -d "Close open segments"
+function __prompt_finish -d "Close open segments"
   if [ -n $current_bg ]
     set_color -b normal
     set_color $current_bg
@@ -55,38 +55,38 @@ end
 #
 # Components
 #
-function prompt_virtual_env -d "Display Python virtual environment"
+function __prompt_virtual_env -d "Display Python virtual environment"
   if test "$VIRTUAL_ENV"
     set env (basename $VIRTUAL_ENV)
-    prompt_segment white black "🐍 $env"
+    __prompt_segment white black "🐍 $env"
   end
 end
 
 
-function prompt_user -d "Display current user if different from $default_user"
+function __prompt_user -d "Display current user if different from $default_user"
   set -l BG 444444
   set -l FG BCBCBC
 
   if [ "$theme_display_user" = "yes" ]
     if [ "$USER" != "$default_user" -o -n "$SSH_CLIENT" ]
       set USER (whoami)
-      get_hostname
+      __prompt_hostname
       if [ $HOSTNAME_PROMPT ]
         set USER_PROMPT $USER@$HOSTNAME_PROMPT
       else
         set USER_PROMPT $USER
       end
-      prompt_segment $BG $FG $USER_PROMPT
+      __prompt_segment $BG $FG $USER_PROMPT
     end
   else
-    get_hostname
+    __prompt_hostname
     if [ $HOSTNAME_PROMPT ]
-      prompt_segment $BG $FG $HOSTNAME_PROMPT
+      __prompt_segment $BG $FG $HOSTNAME_PROMPT
     end
   end
 end
 
-function get_hostname -d "Set current hostname to prompt variable $HOSTNAME_PROMPT if connected via SSH"
+function __prompt_hostname -d "Set current hostname to prompt variable $HOSTNAME_PROMPT if connected via SSH"
   set -g HOSTNAME_PROMPT ""
   if [ "$theme_hostname" = "always" -o \( "$theme_hostname" != "never" -a -n "$SSH_CLIENT" \) ]
     set -g HOSTNAME_PROMPT (hostname)
@@ -94,12 +94,12 @@ function get_hostname -d "Set current hostname to prompt variable $HOSTNAME_PROM
 end
 
 
-function prompt_dir -d "Display the current directory"
-  prompt_segment 1C1C1C FFFFFF (prompt_pwd)
+function __prompt_dir -d "Display the current directory"
+  __prompt_segment 1C1C1C FFFFFF (prompt_pwd)
 end
 
 
-function prompt_hg -d "Display mercurial state"
+function __prompt_hg -d "Display mercurial state"
   set -l branch
   set -l state
   if command hg id >/dev/null 2>&1
@@ -108,17 +108,17 @@ function prompt_hg -d "Display mercurial state"
       set state (command hg prompt "{status}")
       set branch_symbol \uE0A0
       if [ "$state" = "!" ]
-        prompt_segment red white "$branch_symbol $branch ±"
+        __prompt_segment red white "$branch_symbol $branch ±"
       else if [ "$state" = "?" ]
-          prompt_segment yellow black "$branch_symbol $branch ±"
+          __prompt_segment yellow black "$branch_symbol $branch ±"
         else
-          prompt_segment green black "$branch_symbol $branch"
+          __prompt_segment green black "$branch_symbol $branch"
       end
     end
   end
 end
 
-function prompt_git_operation_branch_detached_bare -d 'prompt_git helper, returns the current Git operation, branchdetached, and bare repo'
+function __prompt_git_operation_branch_detached_bare -d 'prompt_git helper, returns the current Git operation, branchdetached, and bare repo'
    # This function is passed the full repo_info array
     set -l git_dir $argv[1]
     set -l inside_gitdir $argv[2]
@@ -211,7 +211,7 @@ function prompt_git_operation_branch_detached_bare -d 'prompt_git helper, return
     echo $bare
 end
 
-function prompt_git -d "Display the current git state"
+function __prompt_git -d "Display the current git state"
   set -l ref
   set -l repo_info (command git rev-parse --git-dir --is-inside-git-dir --is-bare-repository --is-inside-work-tree HEAD 2>/dev/null)
   test -n "$repo_info"
@@ -224,7 +224,7 @@ function prompt_git -d "Display the current git state"
   set -q repo_info[5]
   and set -l sha $repo_info[5]
   
-  set -l obdb (prompt_git_operation_branch_detached_bare $repo_info)
+  set -l obdb (__prompt_git_operation_branch_detached_bare $repo_info)
   set -l op $obdb[1] # current operation
   set -l branch $obdb[2] # current branch
   set -l detached $obdb[3]
@@ -276,22 +276,22 @@ function prompt_git -d "Display the current git state"
       end
     end
 
-    prompt_segment $BG black $PROMPT_BRANCH 
+    __prompt_segment $BG black $PROMPT_BRANCH 
     if test true = "$op_in_progress"
       set -l PROMPT_OP (string replace '|' "" -- $op)
-      prompt_segment yellow black $PROMPT_OP
+      __prompt_segment yellow black $PROMPT_OP
     end
   end
 end
 
 
-function prompt_svn -d "Display the current svn state"
+function __prompt_svn -d "Display the current svn state"
   set -l ref
   if command svn ls . >/dev/null 2>&1
     set branch (svn_get_branch)
     set branch_symbol \uE0A0
     set revision (svn_get_revision)
-    prompt_segment green black "$branch_symbol $branch:$revision"
+    __prompt_segment green black "$branch_symbol $branch:$revision"
   end
 end
 
@@ -313,27 +313,27 @@ function svn_get_revision -d "get the current revision number"
 end
 
 
-function prompt_status -d "the symbols for a non zero exit status, root and background jobs"
+function __prompt_status -d "the symbols for a non zero exit status, root and background jobs"
     if [ $RETVAL -ne 0 ]
-      prompt_segment black red "$RETVAL"
+      __prompt_segment black red "$RETVAL"
     end
 
     # if superuser (uid == 0)
     set -l uid (id -u $USER)
     if [ $uid -eq 0 ]
-      prompt_segment black yellow "☣️"
+      __prompt_segment black yellow "☣️"
     end
 
     # Jobs display
     if [ (jobs -l | wc -l) -gt 0 ]
-      prompt_segment black cyan "⚙"
+      __prompt_segment black cyan "⚙"
     end
 end
 
-function prompt_opam_switch -d "Display active opam's installation"
+function __prompt_opam_switch -d "Display active opam's installation"
   if test "$OPAM_SWITCH_PREFIX"
     set env (basename $OPAM_SWITCH_PREFIX)
-    prompt_segment white black "🐫 $env"
+    __prompt_segment white black "🐫 $env"
   end
 end
 
@@ -342,13 +342,13 @@ end
 #
 function fish_prompt
   set -g RETVAL $status
-  prompt_status
-  prompt_opam_switch
-  prompt_virtual_env
-  prompt_user
-  prompt_dir
-  type -q hg;  and prompt_hg
-  type -q git; and prompt_git
-  type -q svn; and prompt_svn
-  prompt_finish
+  __prompt_status
+  __prompt_opam_switch
+  __prompt_virtual_env
+  __prompt_user
+  __prompt_dir
+  type -q hg;  and __prompt_hg
+  type -q git; and __prompt_git
+  type -q svn; and __prompt_svn
+  __prompt_finish
 end
