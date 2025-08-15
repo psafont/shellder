@@ -321,69 +321,69 @@ function __prompt_jj -d "Display the current jujutsu state"
     return 1
   end
 
-    set branch_symbol \uE0A0
-    set jj_bg white
-    set jj_fg black
-    set jj_command jj log -r@ -n1 --ignore-working-copy --no-graph --color always -T
+  set branch_symbol \uE0A0
+  set jj_bg white
+  set jj_fg black
+  set jj_command jj log -r@ -n1 --ignore-working-copy --no-graph --color always -T
 
-    set jj_status
-    set jj_bookmarks ($jj_command 'bookmarks.map(|x| if(
-        x.name().substr(0, 10).starts_with(x.name()),
-        x.name().substr(0, 10),
-        x.name().substr(0, 9) ++ "…"
-        ))' | string trim)
+  set jj_status
+  set jj_bookmarks ($jj_command 'bookmarks.map(|x| if(
+      x.name().substr(0, 10).starts_with(x.name()),
+      x.name().substr(0, 10),
+      x.name().substr(0, 9) ++ "…"
+      ))' | string trim)
 
-    if string length -q -- $jj_bookmarks
-      set -a jj_status "$jj_bookmarks"
-    end
+  if string length -q -- $jj_bookmarks
+    set -a jj_status "$jj_bookmarks"
+  end
 
-    set jj_tags ($jj_command 'tags.map(|x| if(
-        x.name().substr(0, 10).starts_with(x.name()),
-        x.name().substr(0, 10),
-        x.name().substr(0, 9) ++ "…"
-        ))' | string trim)
+  set jj_tags ($jj_command 'tags.map(|x| if(
+      x.name().substr(0, 10).starts_with(x.name()),
+      x.name().substr(0, 10),
+      x.name().substr(0, 9) ++ "…"
+      ))' | string trim)
 
-    if string length -q -- $jj_tags
-      set -a jj_status "$jj_tags"
-    end
+  if string length -q -- $jj_tags
+    set -a jj_status "$jj_tags"
+  end
 
-    set jj_description ($jj_command 'if(
-        description.first_line().substr(0, 24).starts_with(description.first_line()),
-        description.first_line().substr(0, 24),
-        description.first_line().substr(0, 23) ++ "…"
-        )' | string trim)
+  set jj_description ($jj_command 'if(
+      description.first_line().substr(0, 24).starts_with(description.first_line()),
+      description.first_line().substr(0, 24),
+      description.first_line().substr(0, 23) ++ "…"
+      )' | string trim)
 
-    if string length -q -- $jj_description
-      set -a jj_status "\"$jj_description\""
-    end
+  if string length -q -- $jj_description
+    set -a jj_status "\"$jj_description\""
+  end
 
-    set jj_change ($jj_command 'change_id.shortest()')
-    set -a jj_status "$jj_change$(set_color -b $jj_bg)$(set_color $jj_fg)"
+  set jj_change ($jj_command 'change_id.shortest()')
+  set -a jj_status "$jj_change$(set_color -b $jj_bg)$(set_color $jj_fg)"
 
-    set jj_commit ($jj_command 'commit_id.shortest()')
-    set -a jj_status "$jj_commit$(set_color -b $jj_bg)$(set_color $jj_fg)"
+  set jj_commit ($jj_command 'commit_id.shortest()')
+  set -a jj_status "$jj_commit$(set_color -b $jj_bg)$(set_color $jj_fg)"
 
-    set jj_empty ($jj_command 'if(empty, "(empty)")' | string trim)
-    if string length -q -- $jj_empty
-      set -a jj_status "$jj_empty"
-    end
+  set jj_empty ($jj_command 'if(empty, "(empty)")' | string trim)
+  if string length -q -- $jj_empty
+    set -a jj_status "$jj_empty"
+  end
 
-    set jj_conflict ($jj_command 'if(conflict, "(conflict)")' | string trim)
-    if string length -q -- $jj_conflict
-      set -a jj_status "penos $jj_conflict"
-    end
+  set jj_conflict ($jj_command 'if(conflict, "(conflict)")' | string trim)
+  if string length -q -- $jj_conflict
+    set -a jj_status "penos $jj_conflict"
+  end
 
-    set jj_divergent ($jj_command 'if(divergent, "(divergent)")' | string trim)
-    if string length -q -- $jj_divergent
-      set -a jj_status "pinis $jj_divergent"
-    end
+  set jj_divergent ($jj_command 'if(divergent, "(divergent)")' | string trim)
+  if string length -q -- $jj_divergent
+    set -a jj_status "pinis $jj_divergent"
+  end
 
-    set jj_hidden ($jj_command 'if(hidden, "(hidden)")' | string trim)
-    if string length -q -- $jj_hidden
-      set -a jj_status "pines $jj_hidden"
-    end
+  set jj_hidden ($jj_command 'if(hidden, "(hidden)")' | string trim)
+  if string length -q -- $jj_hidden
+    set -a jj_status "pines $jj_hidden"
+  end
 
-    __prompt_segment $jj_bg $jj_fg "$branch_symbol $jj_status"
+  __prompt_segment $jj_bg $jj_fg "$branch_symbol $jj_status"
 end
 
 function __prompt_status -d "the symbols for a non zero exit status, root and background jobs"
