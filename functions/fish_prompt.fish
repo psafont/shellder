@@ -314,7 +314,13 @@ end
 
 
 function __prompt_jj -d "Display the current jujutsu state"
-  if command -sq jj; and jj root --quiet &>/dev/null
+  set jj_available false
+  command -sq jj; and jj root --quiet &>/dev/null; and set jj_available true
+
+  if test !jj_available = false
+    return 1
+  end
+
     set branch_symbol \uE0A0
     set jj_bg white
     set jj_fg black
@@ -378,7 +384,6 @@ function __prompt_jj -d "Display the current jujutsu state"
     end
 
     __prompt_segment $jj_bg $jj_fg "$branch_symbol $jj_status"
-  end
 end
 
 function __prompt_status -d "the symbols for a non zero exit status, root and background jobs"
@@ -415,9 +420,10 @@ function fish_prompt
   __prompt_virtual_env
   __prompt_user
   __prompt_dir
+  set jj_printed false
+  type -q jj; and __prompt_jj; and jj_printed true
+  if test $jj_printed = false; type -q git; and __prompt_git; end
   type -q hg;  and __prompt_hg
-  type -q git; and __prompt_git
   type -q svn; and __prompt_svn
-  type -q jj; and __prompt_jj
   __prompt_finish
 end
